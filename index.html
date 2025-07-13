@@ -3,530 +3,387 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificador de Puesta a Tierra TT (AEA) v13.0</title>
+    <title>Plan de Carrera</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        window.MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] }, svg: { fontCache: 'global' } };
-    </script>
-    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #111827; color: #d1d5db; }
-        .tab-button.active { border-color: #3b82f6; color: #3b82f6; background-color: #1f2937; }
-        .tab-button { border-color: #4b5563; }
-        .result-section, .mode-section { display: none; }
-        .loader { border: 4px solid #4b5563; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 2rem auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #export-content { position: absolute; left: -9999px; top: -9999px; }
-        .sector-card, .info-card { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        body {
+            font-family: 'Nunito', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .modal {
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .modal.is-open {
+            display: flex;
+        }
+        .modal-content {
+            animation: scaleIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .title-input {
+            background: transparent;
+            border: none;
+            outline: none;
+        }
+        .title-input:focus {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            box-shadow: 0 0 0 2px #c084fc;
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200">
+<body class="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 text-gray-800">
 
-    <div class="container mx-auto p-4 md:p-8 relative">
-        
-        <button id="fullscreenBtn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors" title="Activar/Desactivar pantalla completa">
-            <svg id="fullscreen-enter-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5"></path></svg>
-            <svg id="fullscreen-exit-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 4H4v6m0-6l6 6m10 10h-6v-6m0 6l-6-6"></path></svg>
-        </button>
+    <!-- Header -->
+    <header id="app-header" class="p-4 bg-white/60 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-30">
+        <!-- El contenido del header se generará con JS -->
+    </header>
 
-        <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-white">Planificador de Puesta a Tierra (Esquema TT)</h1>
-            <p class="text-gray-400 mt-2">Diseño de proyecto según reglamentación AEA 90364.</p>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
-
-            <!-- Columna de Parámetros -->
-            <div class="md:col-span-4 bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
-                <div>
-                    <label for="mode_selector" class="block text-sm font-medium text-gray-300 mb-2">Modo de Calculadora</label>
-                    <select id="mode_selector" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
-                        <option value="domiciliaria" selected>Verificación Domiciliaria</option>
-                        <option value="proyecto">Proyecto Completo (Multi-Sector)</option>
-                    </select>
-                </div>
-                
-                <hr class="border-gray-600 my-6">
-
-                <!-- Parámetros Comunes -->
-                <div class="space-y-6">
-                    <h2 class="text-2xl font-semibold -mt-2">1. Parámetros Generales</h2>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Condiciones / Tensión Límite ($U_L$)</label>
-                        <select id="ul_condition" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
-                            <option value="24" selected>Común / Sin supervisión (UL = 24V)</option>
-                            <option value="50">Seco / Personal capacitado (UL = 50V)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="tipo_suelo" class="block text-sm font-medium text-gray-300 mb-2">Resistividad del Terreno (ρ)</label>
-                        <select id="tipo_suelo" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 mb-2">
-                            <option value="10" selected>Arcillas (10 Ω·m)</option>
-                            <option value="5">Aluvial (5 Ω·m)</option>
-                            <option value="20">Greda (20 Ω·m)</option>
-                            <option value="50">T. calcárea (50 Ω·m)</option>
-                            <option value="100">Arenisca (100 Ω·m)</option>
-                            <option value="custom">Ingresar valor manual...</option>
-                        </select>
-                        <input type="number" id="resistividad_manual" placeholder="Ej: 80" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 hidden">
-                    </div>
-                </div>
-                
-                <!-- Modo Domiciliaria -->
-                <div id="mode_domiciliaria" class="mode-section mt-8 space-y-6">
-                    <h2 class="text-2xl font-semibold border-b border-gray-600 pb-3">2. Puesta a Tierra a Verificar</h2>
-                    <div class="space-y-3">
-                         <label class="text-sm font-medium text-gray-300">Sensibilidad Diferencial (IΔn)</label>
-                        <select id="domiciliaria_rcd" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2">
-                            <option value="30" selected>30 mA</option><option value="100">100 mA</option><option value="300">300 mA</option>
-                            <option value="500">500 mA</option><option value="1000">1 A</option>
-                        </select>
-                         <div class="mt-2">
-                            <label class="flex items-center space-x-2 text-sm cursor-pointer">
-                                <input type="checkbox" id="domiciliaria_manual_obj_check" class="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-500 rounded">
-                                <span>Usar objetivo manual de resistencia</span>
-                            </label>
-                            <input type="number" id="domiciliaria_manual_obj_input" placeholder="Ej: 5 Ω" class="w-full bg-gray-600 border-gray-500 rounded-md px-3 py-1.5 mt-2 hidden">
-                        </div>
-                    </div>
-                    <div>
-                         <label class="text-sm font-medium text-gray-300">Jabalina a Instalar</label>
-                        <div class="grid grid-cols-2 gap-2 mt-2">
-                            <select id="domiciliaria_l" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"><option value="1.5">1.5m</option><option value="3" selected>3m</option></select>
-                            <select id="domiciliaria_d" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"><option value="0.0127">1/2"</option><option value="0.0158">5/8"</option><option value="0.01905" selected>3/4"</option></select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modo Proyecto -->
-                <div id="mode_proyecto" class="mode-section mt-8">
-                     <div class="space-y-6">
-                        <h2 class="text-2xl font-semibold border-b border-gray-600 pb-3">2. Puesta a Tierra de Servicio (RB)</h2>
-                         <p class="text-xs text-gray-400 -mt-2">Sistema para el neutro de la acometida.</p>
-                        <div>
-                             <label class="text-sm font-medium text-gray-300">Jabalina para Servicio</label>
-                            <div class="grid grid-cols-2 gap-2 mt-2">
-                                <select id="proyecto_service_l" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"><option value="1.5">1.5m</option><option value="3" selected>3m</option></select>
-                                <select id="proyecto_service_d" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"><option value="0.0127">1/2"</option><option value="0.0158">5/8"</option><option value="0.01905" selected>3/4"</option></select>
-                            </div>
-                        </div>
-                         <div>
-                             <label class="flex items-center space-x-2 text-sm cursor-pointer">
-                                <input type="checkbox" id="proyecto_service_manual_check" class="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-500 rounded">
-                                <span>Usar objetivo manual (por defecto ≤ 1.0 Ω)</span>
-                            </label>
-                            <input type="number" id="proyecto_service_manual_input" value="1" placeholder="Ej: 0.8 Ω" class="w-full bg-gray-600 border-gray-500 rounded-md px-3 py-1.5 mt-2 hidden">
-                         </div>
-                    </div>
-                    <h2 class="text-2xl font-semibold border-b border-gray-600 pb-3 mb-4 mt-8">3. Sectores de Protección (RA)</h2>
-                    <div id="sectores-container" class="space-y-4"></div>
-                    <button id="addSectorBtn" class="mt-4 w-full flex items-center justify-center py-2 px-4 border border-dashed border-gray-500 text-sm font-medium rounded-lg text-gray-400 hover:text-white hover:border-white transition">
-                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path></svg>
-                        Añadir Sector
-                    </button>
-                </div>
-
-                <button id="calcularBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg mt-8 hover:bg-blue-700 transition-colors"></button>
-            </div>
-
-            <!-- Columna de Resultados -->
-            <div class="md:col-span-8">
-                <div id="results-container" class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg min-h-full" style="display: none;"></div>
-                <div id="initial-message" class="flex items-center justify-center bg-gray-800 p-6 rounded-xl border-2 border-dashed border-gray-700 min-h-full">
-                    <div class="text-center">
-                        <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        <h3 class="mt-2 text-lg font-medium text-white">Listo para Planificar</h3>
-                        <p class="mt-1 text-sm text-gray-400">Seleccione el modo de calculadora y complete los parámetros.</p>
-                    </div>
-                </div>
-                <div id="loader-container" class="hidden items-center justify-center bg-gray-800 p-6 rounded-xl"><div class="loader"></div></div>
-            </div>
+    <!-- Progress Section -->
+    <div class="p-4 sm:p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700 text-center">Mi Progreso</h2>
+        <div id="progress-container" class="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-200 flex flex-col items-center gap-8 shadow-lg">
+            <!-- El contenido del progreso se generará con JS -->
         </div>
     </div>
-    <textarea id="export-content"></textarea>
 
-<script>
-    // --- DATABASE & DEFAULTS ---
-    const DB = {
-        soilResistivity: { '10': 'Arcillas', '5': 'Aluvial', '20': 'Greda', '50': 'Tierra calcárea', '100': 'Arenisca' },
-        parallelCoefficients: { 1: 1.0, 2: 0.57, 3: 0.42, 4: 0.33, 5: 0.27, 6: 0.24, 7: 0.21, 8: 0.19, 9: 0.17, 10: 0.15 },
-        aeaTable: { 
-            "50": { "30": 1666, "100": 500, "300": 167, "500": 100, "1000": 50, "3000": 17, "5000": 10, "10000": 5, "20000": 2.5 }, 
-            "24": { "30": 800, "100": 240, "300": 80, "500": 48, "1000": 24, "3000": 8, "5000": 4.8, "10000": 2.4, "20000": 1.2 } 
-        },
-        aeaFinalCap: { "30": 40, "100": 40, "300": 40, "500": 24, "1000": 12, "3000": 4, "5000": 2.4, "10000": 1.2, "20000": 0.6 }
-    };
-    let sectorCount = 0;
-    let currentResults = null;
+    <!-- Main Content -->
+    <main class="px-4 sm:px-6 pb-6">
+        <div id="years-container" class="flex overflow-x-auto space-x-4 pb-4 custom-scrollbar">
+            <!-- Las columnas de años se generarán con JS -->
+        </div>
+    </main>
 
-    // --- DOM ELEMENTS ---
-    const dom = {
-        mode_selector: document.getElementById('mode_selector'),
-        mode_proyecto: document.getElementById('mode_proyecto'),
-        mode_domiciliaria: document.getElementById('mode_domiciliaria'),
-        tipoSuelo: document.getElementById('tipo_suelo'), resistividadManual: document.getElementById('resistividad_manual'),
-        ul_condition: document.getElementById('ul_condition'),
-        calcularBtn: document.getElementById('calcularBtn'), resultsContainer: document.getElementById('results-container'),
-        initialMessage: document.getElementById('initial-message'),
-        loaderContainer: document.getElementById('loader-container'), fullscreenBtn: document.getElementById('fullscreenBtn'),
-        fullscreenEnter: document.getElementById('fullscreen-enter-icon'), fullscreenExit: document.getElementById('fullscreen-exit-icon'),
-        exportTextarea: document.getElementById('export-content'), addSectorBtn: document.getElementById('addSectorBtn'),
-        sectoresContainer: document.getElementById('sectores-container')
-    };
+    <!-- Modal -->
+    <div id="modal" class="modal fixed inset-0 bg-black bg-opacity-40 z-50 justify-center items-center p-4">
+        <div id="modal-content" class="modal-content bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md relative border border-gray-200">
+            <!-- El contenido del modal se generará con JS -->
+        </div>
+    </div>
 
-    // --- EVENT LISTENERS ---
-    dom.mode_selector.addEventListener('change', handleModeChange);
-    dom.tipoSuelo.addEventListener('change', () => dom.resistividadManual.classList.toggle('hidden', dom.tipoSuelo.value !== 'custom'));
-    dom.calcularBtn.addEventListener('click', () => {
-        if (dom.mode_selector.value === 'proyecto' && document.querySelectorAll('.sector-card').length === 0) {
-            alert('Debe añadir al menos un sector de protección.'); return;
-        }
-        dom.resultsContainer.style.display = 'none';
-        dom.initialMessage.style.display = 'none';
-        dom.loaderContainer.style.display = 'flex';
-        setTimeout(performCalculations, 500);
-    });
-    dom.addSectorBtn.addEventListener('click', addSector);
+    <script>
+        // --- ESTADO Y DATOS INICIALES ---
+        const initialSubjectsData = {
+          "1_am1": { id: "1_am1", name: "Análisis Matemático I", credits: 8, prerequisites: [], status: 'PENDING' }, "1_aga": { id: "1_aga", name: "Álgebra y Geometría Analítica", credits: 8, prerequisites: [], status: 'PENDING' }, "1_qui": { id: "1_qui", name: "Química General", credits: 6, prerequisites: [], status: 'PENDING' }, "1_info1": { id: "1_info1", name: "Informática I", credits: 4, prerequisites: [], status: 'PENDING' }, "1_ing1": { id: "1_ing1", name: "Ingeniería y Sociedad", credits: 4, prerequisites: [], status: 'PENDING' }, "1_fis1": { id: "1_fis1", name: "Física I", credits: 8, prerequisites: ["1_am1", "1_aga"], status: 'PENDING' }, "1_sdr": { id: "1_sdr", name: "Sistemas de Representación", credits: 6, prerequisites: [], status: 'PENDING' }, "1_info2": { id: "1_info2", name: "Informática II", credits: 4, prerequisites: ["1_info1"], status: 'PENDING' }, "1_ing2": { id: "1_ing2", name: "Inglés I", credits: 4, prerequisites: [], status: 'PENDING' },
+          "2_am2": { id: "2_am2", name: "Análisis Matemático II", credits: 8, prerequisites: ["1_am1", "1_aga"], status: 'PENDING' }, "2_fis2": { id: "2_fis2", name: "Física II", credits: 8, prerequisites: ["1_fis1"], status: 'PENDING' }, "2_eym": { id: "2_eym", name: "Estabilidad y Resistencia de Materiales", credits: 6, prerequisites: ["1_fis1"], status: 'PENDING' }, "2_proba": { id: "2_proba", name: "Probabilidad y Estadística", credits: 6, prerequisites: ["1_am1", "1_aga"], status: 'PENDING' }, "2_eco": { id: "2_eco", name: "Economía", credits: 4, prerequisites: ["1_ing1"], status: 'PENDING' }, "2_elec": { id: "2_elec", name: "Electrotecnia", credits: 8, prerequisites: ["2_fis2"], status: 'PENDING' }, "2_termo": { id: "2_termo", name: "Termodinámica y Máquinas Térmicas", credits: 6, prerequisites: ["2_fis2"], status: 'PENDING' }, "2_calcav": { id: "2_calcav", name: "Cálculo Avanzado", credits: 6, prerequisites: ["2_am2"], status: 'PENDING' }, "2_ing3": { id: "2_ing3", name: "Inglés II", credits: 4, prerequisites: ["1_ing2"], status: 'PENDING' },
+          "3_med": { id: "3_med", name: "Medidas Eléctricas", credits: 8, prerequisites: ["2_elec"], status: 'PENDING' }, "3_maq1": { id: "3_maq1", name: "Máquinas Eléctricas I", credits: 8, prerequisites: ["2_elec"], status: 'PENDING' }, "3_elec1": { id: "3_elec1", name: "Electrónica I", credits: 8, prerequisites: ["2_elec"], status: 'PENDING' }, "3_cn": { id: "3_cn", name: "Cálculo Numérico", credits: 6, prerequisites: ["2_calcav", "1_info2"], status: 'PENDING' }, "3_leg": { id: "3_leg", name: "Legislación", credits: 4, prerequisites: ["2_eco"], status: 'PENDING' }, "3_sys": { id: "3_sys", name: "Análisis de Señales y Sistemas", credits: 8, prerequisites: ["2_calcav"], status: 'PENDING' }, "3_inst": { id: "3_inst", name: "Instalaciones Eléctricas", credits: 8, prerequisites: ["3_med"], status: 'PENDING' }, "3_tecmat": { id: "3_tecmat", name: "Tecnología de los Materiales Eléctricos", credits: 6, prerequisites: ["1_qui", "2_fis2"], status: 'PENDING' },
+          "4_maq2": { id: "4_maq2", name: "Máquinas Eléctricas II", credits: 8, prerequisites: ["3_maq1"], status: 'PENDING' }, "4_elec2": { id: "4_elec2", name: "Electrónica II", credits: 8, prerequisites: ["3_elec1"], status: 'PENDING' }, "4_ctrl": { id: "4_ctrl", name: "Sistemas de Control", credits: 8, prerequisites: ["3_sys"], status: 'PENDING' }, "4_cent": { id: "4_cent", name: "Centrales Eléctricas", credits: 8, prerequisites: ["2_termo", "3_maq1"], status: 'PENDING' }, "4_redes": { id: "4_redes", name: "Líneas de Transmisión y Redes", credits: 8, prerequisites: ["3_inst"], status: 'PENDING' }, "4_com": { id: "4_com", name: "Comunicaciones", credits: 6, prerequisites: ["3_sys"], status: 'PENDING' }, "4_sh": { id: "4_sh", name: "Seguridad e Higiene Industrial", credits: 4, prerequisites: ["3_leg"], status: 'PENDING' },
+          "5_acc": { id: "5_acc", name: "Accionamientos Eléctricos", credits: 8, prerequisites: ["4_maq2", "4_elec2"], status: 'PENDING' }, "5_prot": { id: "5_prot", name: "Protecciones Eléctricas", credits: 8, prerequisites: ["4_redes"], status: 'PENDING' }, "5_org": { id: "5_org", name: "Organización Industrial", credits: 6, prerequisites: ["4_sh"], status: 'PENDING' }, "5_proy": { id: "5_proy", name: "Proyecto Final", credits: 10, prerequisites: ["4_cent", "4_redes"], status: 'PENDING' }, "5_elec1": { id: "5_elec1", name: "Electiva I", credits: 6, prerequisites: [], status: 'PENDING' }, "5_elec2": { id: "5_elec2", name: "Electiva II", credits: 6, prerequisites: [], status: 'PENDING' },
+        };
+        const initialSemestersData = [
+          { id: 1, name: '1º Semestre', year: 1, subjectIds: ["1_am1", "1_aga", "1_qui", "1_info1", "1_ing1"] }, { id: 2, name: '2º Semestre', year: 1, subjectIds: ["1_fis1", "1_sdr", "1_info2", "1_ing2"] },
+          { id: 3, name: '1º Semestre', year: 2, subjectIds: ["2_am2", "2_fis2", "2_eym", "2_proba", "2_eco"] }, { id: 4, name: '2º Semestre', year: 2, subjectIds: ["2_elec", "2_termo", "2_calcav", "2_ing3"] },
+          { id: 5, name: '1º Semestre', year: 3, subjectIds: ["3_med", "3_maq1", "3_elec1", "3_cn", "3_leg"] }, { id: 6, name: '2º Semestre', year: 3, subjectIds: ["3_sys", "3_inst", "3_tecmat"] },
+          { id: 7, name: '1º Semestre', year: 4, subjectIds: ["4_maq2", "4_elec2", "4_ctrl", "4_cent"] }, { id: 8, name: '2º Semestre', year: 4, subjectIds: ["4_redes", "4_com", "4_sh"] },
+          { id: 9, name: '1º Semestre', year: 5, subjectIds: ["5_acc", "5_prot", "5_org", "5_elec1"] }, { id: 10, name: '2º Semestre', year: 5, subjectIds: ["5_proy", "5_elec2"] },
+        ];
+        const STATUS_COLORS = { PENDING: 'bg-white', IN_PROGRESS: 'bg-blue-200', APPROVED: 'bg-green-200', FAILED: 'bg-red-200' };
 
-    // --- INITIALIZATION ---
-    document.addEventListener('DOMContentLoaded', () => { handleModeChange(); addSector(); });
+        let state = {
+            subjects: {},
+            semesters: [],
+            planTitle: 'Plan de Carrera de Paloma Mariño'
+        };
 
-    // --- CORE FUNCTIONS ---
-    function handleModeChange() {
-        const selectedMode = dom.mode_selector.value;
-        document.querySelectorAll('.mode-section').forEach(el => el.style.display = 'none');
-        document.getElementById(`mode_${selectedMode}`).style.display = 'block';
-        dom.resultsContainer.style.display = 'none';
-        dom.initialMessage.style.display = 'flex';
-        dom.calcularBtn.textContent = selectedMode === 'proyecto' ? 'Calcular Proyecto Completo' : 'Verificar Jabalina Domiciliaria';
-    }
+        // --- FUNCIONES DE RENDERIZADO ---
 
-    function addSector() {
-        sectorCount++;
-        const sectorId = `sector-${sectorCount}`;
-        const newSector = document.createElement('div');
-        newSector.className = 'sector-card bg-gray-700 p-4 rounded-lg border border-gray-600';
-        newSector.id = sectorId;
-        newSector.innerHTML = `
-            <div class="flex justify-between items-center mb-3">
-                <h4 class="font-semibold text-white">Sector de Protección #${sectorCount}</h4>
-                <button onclick="removeSector('${sectorId}')" class="text-gray-500 hover:text-red-400 text-2xl leading-none">&times;</button>
-            </div>
-            <div class="space-y-3">
-                <input type="text" placeholder="Nombre (Ej: Taller)" class="sector-name w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-1.5 text-sm" value="Sector ${sectorCount}">
-                <div>
-                    <label class="text-xs text-gray-400">Sensibilidad Diferencial (IΔn)</label>
-                    <select class="sector-rcd w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-1.5 mt-1 text-sm">
-                        <option value="30" selected>30 mA</option><option value="100">100 mA</option><option value="300">300 mA</option>
-                        <option value="500">500 mA</option><option value="1000">1 A</option><option value="3000">3 A</option>
-                        <option value="5000">5 A</option><option value="10000">10 A</option><option value="20000">20 A</option>
-                    </select>
-                </div>
-                 <div class="mt-2">
-                    <label class="flex items-center space-x-2 text-sm cursor-pointer">
-                        <input type="checkbox" class="sector-manual-check form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-500 rounded">
-                        <span>Usar objetivo manual de resistencia</span>
-                    </label>
-                    <input type="number" class="sector-manual-input w-full bg-gray-600 border-gray-500 rounded-md px-3 py-1.5 mt-2 hidden" placeholder="Ej: 5 Ω">
-                </div>
-                <div>
-                     <label class="text-xs text-gray-400">Jabalina del Sector</label>
-                    <div class="grid grid-cols-2 gap-2 mt-1">
-                        <select class="sector-l w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-1.5 text-sm"><option value="1.5">1.5m</option><option value="3" selected>3m</option></select>
-                        <select class="sector-d w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-1.5 text-sm"><option value="0.0127">1/2"</option><option value="0.0158">5/8"</option><option value="0.01905" selected>3/4"</option></select>
+        function renderHeader() {
+            const headerContainer = document.getElementById('app-header');
+            headerContainer.innerHTML = `
+                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                    <div class="flex-1">
+                        <input 
+                          type="text"
+                          value="${state.planTitle}"
+                          onchange="handleTitleChange(this.value)"
+                          class="text-2xl sm:text-3xl font-bold text-purple-500 w-full p-1 title-input"
+                        />
+                        <p class="text-sm text-gray-500 mt-1 hidden sm:block px-1">Ingeniería Eléctrica - UTN Avellaneda</p>
                     </div>
+                    <button onclick="handleResetData()" class="flex items-center space-x-2 px-3 py-2 bg-red-400 text-white rounded-lg hover:bg-red-500 transition-colors text-sm font-semibold shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        <span>Resetear</span>
+                    </button>
                 </div>
-            </div>`;
-        newSector.querySelector('.sector-manual-check').addEventListener('change', (e) => {
-            e.target.closest('div').nextElementSibling.classList.toggle('hidden', !e.target.checked);
-        });
-        dom.sectoresContainer.appendChild(newSector);
-    }
-    document.getElementById('domiciliaria_manual_obj_check').addEventListener('change', (e) => {
-        document.getElementById('domiciliaria_manual_obj_input').classList.toggle('hidden', !e.target.checked);
-    });
-     document.getElementById('proyecto_service_manual_check').addEventListener('change', (e) => {
-        document.getElementById('proyecto_service_manual_input').classList.toggle('hidden', !e.target.checked);
-    });
-
-    function removeSector(sectorId) { document.getElementById(sectorId).remove(); }
-
-    function getInputs() {
-        const resistividad = dom.tipoSuelo.value === 'custom' ? parseFloat(dom.resistividadManual.value) : parseFloat(dom.tipoSuelo.value);
-        const mode = dom.mode_selector.value;
-        const baseParams = { mode, ul: dom.ul_condition.value, resistividad: isNaN(resistividad) ? 0 : resistividad };
-
-        if (mode === 'proyecto') {
-            baseParams.sectores = Array.from(document.querySelectorAll('.sector-card')).map(card => ({
-                name: card.querySelector('.sector-name').value,
-                rcd: card.querySelector('.sector-rcd').value,
-                l: parseFloat(card.querySelector('.sector-l').value),
-                d: parseFloat(card.querySelector('.sector-d').value),
-                manualCheck: card.querySelector('.sector-manual-check').checked,
-                manualInput: parseFloat(card.querySelector('.sector-manual-input').value)
-            }));
-            baseParams.service = {
-                 l: parseFloat(document.getElementById('proyecto_service_l').value),
-                 d: parseFloat(document.getElementById('proyecto_service_d').value),
-                 manualCheck: document.getElementById('proyecto_service_manual_check').checked,
-                 manualInput: parseFloat(document.getElementById('proyecto_service_manual_input').value)
-            };
-        } else {
-            baseParams.domiciliaria = {
-                rcd: document.getElementById('domiciliaria_rcd').value,
-                l: parseFloat(document.getElementById('domiciliaria_l').value),
-                d: parseFloat(document.getElementById('domiciliaria_d').value),
-                manualCheck: document.getElementById('domiciliaria_manual_obj_check').checked,
-                manualInput: parseFloat(document.getElementById('domiciliaria_manual_obj_input').value)
-            };
+            `;
         }
-        return baseParams;
-    }
 
-    function getPatObjective(rcd, ul, manualCheck, manualValue) {
-        if(manualCheck && !isNaN(manualValue) && manualValue > 0) return manualValue;
-        const calculated_ra = DB.aeaTable[ul]?.[rcd] || Infinity;
-        const capped_ra = DB.aeaFinalCap[rcd] || calculated_ra;
-        return Math.min(calculated_ra, capped_ra);
-    }
-    
-    function calculatePat(resistividad, longitud, diametro, objetivo) {
-        const Rj = (resistividad / (2 * Math.PI * longitud)) * Math.log((4 * longitud / diametro) - 1);
-        let numJabalinas = 0, Rt = Infinity;
-        if (Rj <= objetivo) {
-            numJabalinas = 1; Rt = Rj;
-        } else {
-            for (let i = 2; i <= 10; i++) {
-                const k = DB.parallelCoefficients[i];
-                const currentRt = k * Rj;
-                if (currentRt <= objetivo) { numJabalinas = i; Rt = currentRt; break; }
+        function renderProgress() {
+            const progressContainer = document.getElementById('progress-container');
+            const years = [...new Set(state.semesters.map(s => s.year))].sort((a, b) => a - b);
+            const totalCredits = Object.values(state.subjects).reduce((sum, s) => sum + s.credits, 0);
+            const totalApprovedCredits = Object.values(state.subjects).filter(s => s.status === 'APPROVED').reduce((sum, s) => sum + s.credits, 0);
+
+            let yearProgressHTML = '';
+            years.forEach(year => {
+                const subjectIdsForYear = state.semesters.filter(s => s.year === year).flatMap(s => s.subjectIds);
+                const yearTotalCredits = subjectIdsForYear.reduce((sum, id) => sum + (state.subjects[id]?.credits || 0), 0);
+                const yearApprovedCredits = subjectIdsForYear.filter(id => state.subjects[id]?.status === 'APPROVED').reduce((sum, id) => sum + (state.subjects[id]?.credits || 0), 0);
+                if (yearTotalCredits > 0) {
+                    yearProgressHTML += createCircularProgressHTML(`Año ${year}`, yearApprovedCredits, yearTotalCredits, 'small', '#22c55e');
+                }
+            });
+
+            progressContainer.innerHTML = `
+                <div class="w-full flex justify-center">
+                    ${createCircularProgressHTML('Total Carrera', totalApprovedCredits, totalCredits, 'large', '#8b5cf6')}
+                </div>
+                <div class="w-full flex flex-wrap justify-center items-center gap-8">
+                    ${yearProgressHTML}
+                </div>
+            `;
+        }
+
+        function renderYears() {
+            const yearsContainer = document.getElementById('years-container');
+            const groupedSemesters = state.semesters.reduce((acc, semester) => {
+                (acc[semester.year] = acc[semester.year] || []).push(semester);
+                return acc;
+            }, {});
+
+            yearsContainer.innerHTML = Object.entries(groupedSemesters).map(([year, yearSemesters]) => {
+                const yearNumber = {1: "Primer", 2: "Segundo", 3: "Tercer", 4: "Cuarto", 5: "Quinto"}[year];
+                let semestersHTML = yearSemesters.map(semester => {
+                    let subjectsHTML = semester.subjectIds.map(id => state.subjects[id]).filter(Boolean).map(subject => {
+                        const bgColor = STATUS_COLORS[subject.status];
+                        const arePrerequisitesMet = (!subject.prerequisites || subject.prerequisites.length === 0) || subject.prerequisites.every(prereqId => state.subjects[prereqId]?.status === 'APPROVED');
+                        return `
+                            <div class="group relative p-3 rounded-lg text-center font-semibold text-gray-700 cursor-pointer transition-all duration-300 ${bgColor} ${arePrerequisitesMet ? 'opacity-100' : 'opacity-50 grayscale'}" onclick="handleEditSubject('${subject.id}')">
+                                ${subject.name}
+                                <button onclick="event.stopPropagation(); handleDeleteSubject('${subject.id}');" class="absolute top-1 right-1 w-5 h-5 bg-red-400 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                    return `
+                        <div class="mb-4">
+                            <h4 class="font-bold text-md text-gray-600 mb-2 ml-1">${semester.name}</h4>
+                            <div class="space-y-2">${subjectsHTML}</div>
+                             <button onclick="handleNewSubject('${semester.id}')" class="w-full mt-2 p-1.5 bg-gray-200/70 text-gray-500 rounded-lg hover:bg-gray-300/70 hover:text-gray-700 transition-colors text-sm flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span class="ml-1">Añadir materia</span>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="bg-purple-100/60 backdrop-blur-sm rounded-2xl p-4 flex-shrink-0 w-80 border border-purple-200 shadow-lg">
+                        <h3 class="font-bold text-2xl text-purple-700 text-center mb-4">${yearNumber} Año</h3>
+                        ${semestersHTML}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderModal(subject = null, semesterId = null) {
+            const modalContent = document.getElementById('modal-content');
+            const isNew = !subject;
+            const title = isNew ? 'Añadir Nueva Materia' : 'Editar Materia';
+            
+            const currentSubject = subject || { name: '', credits: '', prerequisites: [] };
+            const availablePrerequisites = Object.values(state.subjects).filter(s => s.id !== currentSubject.id);
+
+            let statusButtonsHTML = '';
+            if (!isNew) {
+                statusButtonsHTML = Object.entries(STATUS_COLORS).map(([statusKey, bgColor]) => `
+                    <button type="button" onclick="handleUpdateStatus('${currentSubject.id}', '${statusKey}')"
+                        class="px-3 py-1 text-sm rounded-full transition-all ${bgColor} ${currentSubject.status === statusKey ? 'ring-2 ring-purple-500' : 'ring-1 ring-gray-300'}">
+                        ${statusKey.charAt(0) + statusKey.slice(1).toLowerCase().replace('_', ' ')}
+                    </button>
+                `).join('');
             }
-            if (numJabalinas === 0) { numJabalinas = 10; Rt = DB.parallelCoefficients[10] * Rj; }
-        }
-        const Re = longitud / Math.log(longitud / diametro);
-        return { Rj, Rt, numJabalinas, Re, cumple: Rt <= objetivo, objetivo, longitud, diametro };
-    }
-    
-    function performCalculations() {
-        const params = getInputs();
-        if (params.resistividad <= 0) {
-            alert('Por favor, ingrese un valor de resistividad válido.');
-            dom.loaderContainer.style.display = 'none';
-            dom.initialMessage.style.display = 'flex';
-            return;
+
+            modalContent.innerHTML = `
+                <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <h2 class="text-2xl font-bold text-gray-700 mb-6">${title}</h2>
+                <form id="subject-form" class="space-y-4">
+                    ${!isNew ? `<div class="flex space-x-2">${statusButtonsHTML}</div>` : ''}
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-600 mb-1">Nombre de la Materia</label>
+                        <input id="name" type="text" value="${currentSubject.name}" class="w-full bg-gray-100 border border-gray-300 text-gray-800 rounded-lg p-2 focus:ring-2 focus:ring-purple-400 focus:outline-none" required />
+                    </div>
+                    <div>
+                        <label for="credits" class="block text-sm font-medium text-gray-600 mb-1">Créditos</label>
+                        <input id="credits" type="number" value="${currentSubject.credits}" class="w-full bg-gray-100 border border-gray-300 text-gray-800 rounded-lg p-2 focus:ring-2 focus:ring-purple-400 focus:outline-none" required />
+                    </div>
+                    <div>
+                        <label for="prerequisites" class="block text-sm font-medium text-gray-600 mb-1">Correlativas</label>
+                        <select id="prerequisites" multiple class="w-full bg-gray-100 border border-gray-300 text-gray-800 rounded-lg p-2 h-32 focus:ring-2 focus:ring-purple-400 focus:outline-none">
+                            ${availablePrerequisites.map(s => `<option value="${s.id}" ${currentSubject.prerequisites.includes(s.id) ? 'selected' : ''}>${s.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-purple-400 text-white rounded-lg hover:bg-purple-500 transition-colors font-semibold">Guardar</button>
+                    </div>
+                </form>
+            `;
+
+            document.getElementById('subject-form').onsubmit = (e) => {
+                e.preventDefault();
+                handleSaveSubject(currentSubject.id, semesterId);
+            };
+            document.getElementById('modal').classList.add('is-open');
         }
 
-        if (params.mode === 'proyecto') {
-            const srv = params.service;
-            const srvObjective = srv.manualCheck && !isNaN(srv.manualInput) ? srv.manualInput : 1.0;
-            const patService = calculatePat(params.resistividad, srv.l, srv.d, srvObjective);
-            patService.isManual = srv.manualCheck;
+        // --- HELPERS ---
+        function createCircularProgressHTML(label, value, max, size, color) {
+            const dimensions = size === 'large' 
+                ? { radius: 70, stroke: 12, font: 'text-3xl' } 
+                : { radius: 52, stroke: 10, font: 'text-2xl' };
+            const { radius, stroke, font } = dimensions;
+            const percentage = max > 0 ? (value / max) * 100 : 0;
+            const normalizedRadius = radius - stroke * 2;
+            const circumference = normalizedRadius * 2 * Math.PI;
+            const strokeDashoffset = circumference - (percentage / 100) * circumference;
+            return `
+                <div class="flex flex-col items-center justify-center space-y-2">
+                    <div class="relative">
+                        <svg height="${radius * 2}" width="${radius * 2}">
+                            <circle stroke="#e5e7eb" stroke-width="${stroke}" fill="transparent" r="${normalizedRadius}" cx="${radius}" cy="${radius}" />
+                            <circle stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${circumference} ${circumference}" style="stroke-dashoffset:${strokeDashoffset}; stroke-linecap: round;" fill="transparent" r="${normalizedRadius}" cx="${radius}" cy="${radius}" class="transform -rotate-90 origin-center transition-all duration-500" />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="font-bold text-gray-700 ${font}">${Math.round(percentage)}%</span>
+                        </div>
+                    </div>
+                    <p class="font-semibold text-gray-600 text-center">${label}</p>
+                    <p class="text-sm text-gray-500">${value} / ${max} créditos</p>
+                </div>
+            `;
+        }
 
-            const patProteccion = params.sectores.map(sector => {
-                const objective = getPatObjective(sector.rcd, params.ul, sector.manualCheck, sector.manualInput);
-                const result = {
-                    ...calculatePat(params.resistividad, sector.l, sector.d, objective),
-                    name: sector.name, rcd: sector.rcd, isManual: sector.manualCheck
+        function closeModal() {
+            document.getElementById('modal').classList.remove('is-open');
+        }
+
+        // --- MANEJADORES DE EVENTOS (HANDLERS) ---
+        window.handleTitleChange = (newValue) => {
+            state.planTitle = newValue;
+            saveState();
+        };
+
+        window.handleResetData = () => {
+            if (confirm('¿Estás segura? Se borrarán todos los datos y se cargará la plantilla inicial.')) {
+                localStorage.removeItem('plannerState');
+                loadInitialState();
+                renderApp();
+            }
+        };
+
+        window.handleNewSubject = (semesterId) => {
+            renderModal(null, semesterId);
+        };
+
+        window.handleEditSubject = (subjectId) => {
+            const subject = state.subjects[subjectId];
+            renderModal(subject);
+        };
+
+        window.handleDeleteSubject = (subjectId) => {
+            if (confirm('¿Estás segura de que quieres eliminar esta materia?')) {
+                delete state.subjects[subjectId];
+                state.semesters.forEach(s => {
+                    s.subjectIds = s.subjectIds.filter(id => id !== subjectId);
+                });
+                Object.values(state.subjects).forEach(sub => {
+                    sub.prerequisites = sub.prerequisites.filter(p => p !== subjectId);
+                });
+                saveAndRender();
+            }
+        };
+        
+        window.handleUpdateStatus = (subjectId, newStatus) => {
+            state.subjects[subjectId].status = newStatus;
+            saveAndRender();
+            // Re-render modal if it's open for this subject
+            const modal = document.getElementById('modal');
+            if (modal.classList.contains('is-open')) {
+                renderModal(state.subjects[subjectId]);
+            }
+        };
+
+        window.handleSaveSubject = (subjectId, semesterId) => {
+            const form = document.getElementById('subject-form');
+            const name = form.querySelector('#name').value;
+            const credits = parseInt(form.querySelector('#credits').value, 10);
+            const prerequisites = Array.from(form.querySelector('#prerequisites').selectedOptions).map(opt => opt.value);
+
+            if (subjectId) { // Editing existing
+                state.subjects[subjectId] = { ...state.subjects[subjectId], name, credits, prerequisites };
+            } else { // Creating new
+                const newId = `subj_${new Date().getTime()}`;
+                state.subjects[newId] = { id: newId, name, credits, prerequisites, status: 'PENDING' };
+                const semester = state.semesters.find(s => s.id == semesterId);
+                semester.subjectIds.push(newId);
+            }
+            closeModal();
+            saveAndRender();
+        };
+
+        // --- LÓGICA PRINCIPAL ---
+        function saveState() {
+            localStorage.setItem('plannerState', JSON.stringify(state));
+        }
+
+        function renderApp() {
+            renderHeader();
+            renderProgress();
+            renderYears();
+        }
+
+        function saveAndRender() {
+            saveState();
+            renderApp();
+        }
+
+
+        function loadInitialState() {
+            const savedState = localStorage.getItem('plannerState');
+            if (savedState) {
+                state = JSON.parse(savedState);
+            } else {
+                state = {
+                    subjects: JSON.parse(JSON.stringify(initialSubjectsData)),
+                    semesters: JSON.parse(JSON.stringify(initialSemestersData)),
+                    planTitle: 'Plan de Carrera de Paloma Mariño'
                 };
-                return result;
-            });
-            currentResults = { params, patService, patProteccion };
-        } else {
-            const p = params.domiciliaria;
-            const objective = getPatObjective(p.rcd, params.ul, p.manualCheck, p.manualInput);
-            const patUnica = calculatePat(params.resistividad, p.l, p.d, objective);
-            patUnica.isManual = p.manualCheck;
-            patUnica.rcd = p.rcd; // Pass rcd for result card
-            currentResults = { params, patUnica };
-        }
-        displayResults(currentResults);
-    }
-
-    function displayResults(results) {
-        dom.loaderContainer.style.display = 'none';
-        dom.resultsContainer.style.display = 'block';
-        const content = results.params.mode === 'proyecto' ? generateProjectContent(results) : generateDomiciliariaContent(results);
-        dom.resultsContainer.innerHTML = content;
-        document.querySelectorAll('.tab-button').forEach(button => button.addEventListener('click', e => switchTab(e.currentTarget)));
-        document.getElementById('results-container').addEventListener('click', (e) => {
-            if (e.target.id === 'exportTxtBtn') exportToTxt();
-            if (e.target.id === 'exportCsvBtn') exportToCsv();
-        });
-        if (window.MathJax) MathJax.typesetPromise();
-        switchTab(document.querySelector('.tab-button[data-tab="resultados"]'));
-    }
-    
-    function generateBaseLayout(title, content) {
-         return `
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b border-gray-600 pb-4">
-                <h2 class="text-2xl font-semibold">${title}</h2>
-                <div class="flex space-x-2 mt-4 sm:mt-0">
-                    <button id="exportTxtBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        Copiar Informe (.txt)
-                    </button>
-                    <button id="exportCsvBtn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Exportar a Excel (.csv)
-                    </button>
-                </div>
-            </div>
-            <div class="border-b border-gray-600 mb-6">
-                <nav class="flex space-x-1 sm:space-x-2 overflow-x-auto" aria-label="Tabs">
-                    <button class="tab-button active py-2 px-3 sm:px-4 text-sm font-medium" data-tab="resultados">Resultados</button>
-                    <button class="tab-button py-2 px-3 sm:px-4 text-sm font-medium" data-tab="calculos">Anexo: Cálculos</button>
-                    <button class="tab-button py-2 px-3 sm:px-4 text-sm font-medium" data-tab="formulas">Anexo: Fórmulas</button>
-                    <button class="tab-button py-2 px-3 sm:px-4 text-sm font-medium" data-tab="tablas">Anexo: Tablas</button>
-                </nav>
-            </div>
-            <div id="tab-content">${content}</div>`;
-    }
-
-    function switchTab(clickedButton) {
-        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        clickedButton.classList.add('active');
-        document.querySelectorAll('.result-section').forEach(section => section.style.display = 'none');
-        document.getElementById(`tab-${clickedButton.dataset.tab}`).style.display = 'block';
-    }
-
-    // --- CONTENT GENERATORS ---
-    function generateProjectContent(results) { return generateBaseLayout("Resultados del Proyecto (Esquema TT)", `${generateProjectResultsTab(results)}${generateProjectCalculosTab(results)}${generateFormulasTab()}${generateTablasTab()}`); }
-    function generateDomiciliariaContent(results) { return generateBaseLayout("Resultados Verificación Domiciliaria", `${generateDomiciliariaResultsTab(results)}${generateDomiciliariaCalculosTab(results)}${generateFormulasTab()}${generateTablasTab()}`); }
-
-    function createResultCard(title, id, {Rt, Rj, numJabalinas, cumple, objetivo, rcd, isManual}) {
-        const statusClass = cumple ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800';
-        const objectiveType = isManual ? '(Manual)' : `(Reglamento, ${rcd}mA)`;
-        return `<div class="bg-gray-700 p-4 rounded-lg flex flex-col">
-                <h4 class="font-bold text-lg text-white">${title} <span class="text-sm font-normal text-gray-400">(${id})</span></h4>
-                <div class="mt-3 space-y-2 text-sm flex-grow">
-                    <div class="flex justify-between"><span>Resistencia 1 Jabalina (Rj):</span><span class="font-semibold">${Rj.toFixed(2)} Ω</span></div>
-                    <div class="flex justify-between"><span>Objetivo ${objectiveType}:</span><span class="font-semibold">≤ ${objetivo.toFixed(1)} Ω</span></div>
-                    <hr class="border-gray-600">
-                    <div class="flex justify-between text-base"><b>Solución Propuesta:</b><span class="font-bold">${numJabalinas} Jabalina(s)</span></div>
-                    <div class="flex justify-between"><span>Resistencia Final (RT):</span><span class="font-bold text-lg">${Rt.toFixed(2)} Ω</span></div>
-                </div>
-                <div class="mt-3 text-center text-sm font-bold p-1 rounded ${statusClass}">${cumple ? 'CUMPLE' : 'NO CUMPLE'}</div>
-            </div>`;
-    }
-    function generateProjectResultsTab({ patService, patProteccion }) {
-        const serviceCard = createResultCard('Puesta a Tierra de Servicio', 'RB', patService);
-        const protectionCards = patProteccion.map((p, i) => createResultCard(p.name, `RA${i+1}`, p)).join('');
-        return `<div id="tab-resultados" class="result-section space-y-6"><div><h3 class="text-xl font-semibold text-blue-400 mb-3">1. Sistema de Servicio (Neutro)</h3><p class="text-sm text-gray-400 mb-2">Puesta a tierra para estabilidad de la red.</p>${serviceCard}</div><div><h3 class="text-xl font-semibold text-blue-400 mb-3">2. Sistemas de Protección (Masas)</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${protectionCards}</div></div><div><h3 class="text-xl font-semibold text-blue-400 mb-3">3. Requisito de Separación</h3><div class="bg-gray-700 p-4 rounded-lg"><p class="text-sm text-gray-400">Separación Mínima entre Jabalinas de distintos sistemas (Recomendado > 5m)</p><p class="text-2xl font-bold">${(patService.Re * 10).toFixed(2)} m</p></div></div></div>`;
-    }
-    function generateProjectCalculosTab({ patService, patProteccion, params }) {
-        const serviceCalc = `RT = K * Rj = ${DB.parallelCoefficients[patService.numJabalinas]} * ${patService.Rj.toFixed(2)} = ${patService.Rt.toFixed(2)} Ω`;
-        const protectionCalcs = patProteccion.map((p, i) => `<div class="bg-gray-700 p-4 rounded-lg"><h4 class="font-semibold mb-2 text-blue-400">Cálculo para ${p.name} (RA${i+1})</h4><p class="font-mono text-sm break-words">Rj = (${params.resistividad} / (2π * ${p.longitud})) * ln((4*${p.longitud}/${p.diametro}) - 1) = ${p.Rj.toFixed(2)} Ω</p><p class="font-mono text-sm break-words">RT = K * Rj = ${DB.parallelCoefficients[p.numJabalinas]} * ${p.Rj.toFixed(2)} = ${p.Rt.toFixed(2)} Ω</p><p class="text-xs text-gray-400 mt-2">Objetivo ${p.isManual ? '(Manual)' : `(Reglamento, ${p.rcd}mA, UL=${params.ul}V)`}: ≤ ${p.objetivo} Ω</p></div>`).join('');
-        return `<div id="tab-calculos" class="result-section space-y-4"><div class="bg-gray-700 p-4 rounded-lg"><h4 class="font-semibold mb-2 text-blue-400">Cálculo para Servicio (RB)</h4><p class="font-mono text-sm break-words">Rj (${patService.longitud}m x ${patService.diametro}m) = (${params.resistividad} / (2π * ${patService.longitud})) * ln((4*${patService.longitud}/${patService.diametro}) - 1) = ${patService.Rj.toFixed(2)} Ω</p><p class="font-mono text-sm break-words">${serviceCalc}</p></div>${protectionCalcs}</div>`;
-    }
-    function generateDomiciliariaResultsTab({ patUnica }) {
-        return `<div id="tab-resultados" class="result-section">${createResultCard('Verificación Domiciliaria', 'RA', patUnica)}</div>`;
-    }
-    function generateDomiciliariaCalculosTab({ patUnica, params }) {
-         const { Rj, Rt, numJabalinas, longitud, diametro, objetivo, rcd, isManual } = patUnica;
-         const { resistividad, ul } = params;
-         return `<div id="tab-calculos" class="result-section space-y-4">
-            <div class="bg-gray-700 p-4 rounded-lg"><h4 class="font-semibold mb-2 text-blue-400">1. Cálculo de Resistencia de Jabalina (Rj)</h4><p class="font-mono text-sm break-words">Rj = (${resistividad} / (2π * ${longitud})) * ln((4*${longitud}/${diametro}) - 1) = ${Rj.toFixed(2)} Ω</p></div>
-            <div class="bg-gray-700 p-4 rounded-lg"><h4 class="font-semibold mb-2 text-blue-400">2. Determinación de Resistencia Máxima (RA max)</h4><p class="font-mono text-sm break-words">${ isManual ? `Objetivo Manual: ${objetivo} Ω` : `RA_max = min(UL/IΔn, Límite_Tabla) = ${objetivo} Ω`}</p></div>
-            <div class="bg-gray-700 p-4 rounded-lg"><h4 class="font-semibold mb-2 text-blue-400">3. Cálculo de Sistema Final (RT)</h4><p class="font-mono text-sm break-words">${numJabalinas === 1 ? 'RT = Rj' : `RT = K * Rj = ${DB.parallelCoefficients[numJabalinas]} * ${Rj.toFixed(2)}`} = ${Rt.toFixed(2)} Ω</p></div>
-            </div>`;
-    }
-     function generateFormulasTab() {
-        return `<div id="tab-formulas" class="result-section space-y-6"><div><h4 class="font-semibold text-lg text-blue-400">Resistencia de una Jabalina (Rj)</h4><div class="bg-gray-700 p-4 rounded-lg mt-2 font-mono text-center text-lg">$$ R_j = \\left(\\frac{\\rho}{2 \\cdot \\pi \\cdot L}\\right) \\cdot \\ln\\left(\\frac{4L}{d} - 1\\right) $$</div></div><div><h4 class="font-semibold text-lg text-blue-400">Resistencia de Jabalinas en Paralelo (RT)</h4><div class="bg-gray-700 p-4 rounded-lg mt-2 font-mono text-center text-lg">$$ R_T = K \\cdot R_j $$</div></div><div><h4 class="font-semibold text-lg text-blue-400">Resistencia Máxima de Protección (RA)</h4><div class="bg-gray-700 p-4 rounded-lg mt-2 font-mono text-center text-lg">$$ R_A \\le \\frac{U_L}{I_{\\Delta n}} $$</div></div></div>`;
-    }
-    function generateTablasTab() {
-        const soilRows = Object.entries(DB.soilResistivity).map(([val, name]) => `<tr><td class="p-3">${name}</td><td class="p-3 text-right">${val} Ω·m</td></tr>`).join('');
-        const parallelRows = Object.entries(DB.parallelCoefficients).map(([n, k]) => `<tr><td class="p-3">${n}</td><td class="p-3 text-right">${k}</td></tr>`).join('');
-        const rcdRows = Object.entries(DB.aeaFinalCap).map(([rcd, res]) => `<tr><td class="p-3">${parseInt(rcd) < 1000 ? rcd + ' mA' : rcd/1000 + ' A'}</td><td class="p-3 text-right">${DB.aeaTable['50'][rcd] || '-'} Ω</td><td class="p-3 text-right">${DB.aeaTable['24'][rcd] || '-'} Ω</td><td class="p-3 text-right font-bold text-white">${res} Ω</td></tr>`).join('');
-        return `<div id="tab-tablas" class="result-section"><div class="grid grid-cols-1 gap-6"><div class="lg:col-span-2"><h4 class="font-semibold mb-3 text-blue-400">Tabla 1: Resistencia Máxima de Protección vs. Diferencial (AEA 90364)</h4><div class="overflow-x-auto bg-gray-700 rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-gray-600 text-xs uppercase"><tr><th class="p-3" rowspan="2">Sensibilidad (IΔn)</th><th class="p-3 text-center" colspan="3">Resistencia Máxima (RA)</th></tr><tr><th class="p-3 text-right">UL = 50V</th><th class="p-3 text-right">UL = 24V</th><th class="p-3 text-right">Valor Final</th></tr></thead><tbody class="divide-y divide-gray-600">${rcdRows}</tbody></table></div></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div><h4 class="font-semibold mb-3 text-blue-400">Tabla 2: Resistividad del Terreno</h4><div class="overflow-x-auto bg-gray-700 rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-gray-600 text-xs uppercase"><tr><th class="p-3">Tipo de Suelo</th><th class="p-3 text-right">Valor</th></tr></thead><tbody class="divide-y divide-gray-600">${soilRows}</tbody></table></div></div><div><h4 class="font-semibold mb-3 text-blue-400">Tabla 3: Coeficientes Paralelo (K)</h4><div class="overflow-x-auto bg-gray-700 rounded-lg"><table class="w-full text-sm text-left"><thead class="bg-gray-600 text-xs uppercase"><tr><th class="p-3">N° Jabalinas</th><th class="p-3 text-right">K</th></tr></thead><tbody class="divide-y divide-gray-600">${parallelRows}</tbody></table></div></div></div></div></div>`;
-    }
-    
-    // --- UTILITY FUNCTIONS ---
-    function exportToTxt() {
-        if (!currentResults) { alert("Primero debe realizar un cálculo."); return; }
-        const { params } = currentResults;
-        let report = `Informe de Planificación de Puesta a Tierra (Esquema TT)\n========================================\n\n`;
-        report += `** 1. PARÁMETROS GENERALES **\nModo de Uso:\t${params.mode}\nCondiciones (UL):\t${params.ul}V\nResistividad (ρ):\t${params.resistividad} Ω·m\n\n`;
-
-        if (params.mode === 'proyecto') {
-            const { patService, patProteccion } = currentResults;
-            const d_text_service = { "0.0127": "1/2\"", "0.0158": "5/8\"", "0.01905": "3/4\"" };
-            report += `** 2. SISTEMA DE SERVICIO (RB) **\nJabalina usada:\t${params.service.l}m x ${d_text_service[params.service.d]}\nObjetivo:\t≤ ${patService.objetivo.toFixed(1)} Ω ${patService.isManual ? '(Manual)' : ''}\nResultado:\t${patService.Rt.toFixed(2)} Ω (${patService.cumple ? 'CUMPLE' : 'NO CUMPLE'})\nJabalinas:\t${patService.numJabalinas}\n\n`;
-            report += `** 3. SISTEMAS DE PROTECCIÓN (RA) **\n`;
-            patProteccion.forEach((p, i) => {
-                const d_text = { "0.0127": "1/2\"", "0.0158": "5/8\"", "0.01905": "3/4\"" };
-                report += `\tSector ${i+1}: ${p.name}\n\tJabalina usada:\t${p.longitud}m x ${d_text[p.diametro]}\n\tDiferencial:\t${p.rcd} mA\n\tObjetivo:\t≤ ${p.objetivo.toFixed(1)} Ω ${p.isManual ? '(Manual)' : ''}\n`;
-                report += `\tResultado:\t${p.Rt.toFixed(2)} Ω (${p.cumple ? 'CUMPLE' : 'NO CUMPLE'})\n\tJabalinas:\t${p.numJabalinas}\n\n`;
-            });
-            report += `** 4. SEPARACIÓN REGLAMENTARIA **\n`;
-            report += `Separación mínima entre sistemas:\t${(patService.Re * 10).toFixed(2)} m\n`;
-        } else { // Domiciliaria
-            const { patUnica } = currentResults;
-            const d_text = { "0.0127": "1/2\"", "0.0158": "5/8\"", "0.01905": "3/4\"" };
-            report += `** 2. VERIFICACIÓN DOMICILIARIA **\nJabalina usada:\t${patUnica.longitud}m x ${d_text[patUnica.diametro]}\n`;
-            report += `Diferencial:\t${params.domiciliaria.rcd} mA\n`;
-            report += `Resistencia Máxima Permitida:\t≤ ${patUnica.objetivo.toFixed(1)} Ω ${patUnica.isManual ? '(Manual)' : ''}\n`;
-            report += `Resistencia Calculada (1 Jabalina):\t${patUnica.Rj.toFixed(2)} Ω\n`;
-            report += `\n** SOLUCIÓN PROPUESTA **\nJabalinas Necesarias:\t${patUnica.numJabalinas}\n`;
-            report += `Resistencia Final del Sistema (RT):\t${patUnica.Rt.toFixed(2)} Ω\n`;
-            report += `RESULTADO:\t${patUnica.cumple ? 'CUMPLE' : 'NO CUMPLE'}\n`;
-        }
-
-        dom.exportTextarea.value = report.replace(/\t/g, '   ');
-        dom.exportTextarea.select();
-        try { document.execCommand('copy'); alert('¡Informe copiado al portapapeles!'); } catch (err) { alert('Error al copiar.'); }
-    }
-
-    function exportToCsv() {
-        if (!currentResults) { alert("Primero debe realizar un cálculo."); return; }
-        const { params } = currentResults;
-        let csvContent = "data:text/csv;charset=utf-8,";
-        const headers = "Tipo Sistema,Nombre/ID,Resultado,Resistencia Final (ohm),Jabalinas Necesarias,Objetivo (ohm),Resistividad (ohm.m),UL (V),Jabalina Usada,Diferencial (mA)\n";
-        csvContent += headers;
-
-        const d_text = { "0.0127": "1/2\"", "0.0158": "5/8\"", "0.01905": "3/4\"" };
-        if (params.mode === 'proyecto') {
-            const { patService, patProteccion } = currentResults;
-            const service_d_text = `${params.service.l}m x ${d_text[params.service.d]}`;
-            csvContent += `Servicio,RB,${patService.cumple ? 'CUMPLE' : 'NO CUMPLE'},${patService.Rt.toFixed(2)},${patService.numJabalinas},${patService.objetivo.toFixed(1)},${params.resistividad},N/A,${service_d_text},N/A\n`;
-            patProteccion.forEach((p, i) => {
-                 const p_d_text = `${p.longitud}m x ${d_text[p.diametro]}`;
-                 csvContent += `Proteccion,${p.name} (RA${i+1}),${p.cumple ? 'CUMPLE' : 'NO CUMPLE'},${p.Rt.toFixed(2)},${p.numJabalinas},${p.objetivo.toFixed(1)},${params.resistividad},${params.ul},${p_d_text},${p.rcd}\n`;
-            });
-        } else {
-            const { patUnica } = currentResults;
-            const p_d_text = `${patUnica.longitud}m x ${d_text[patUnica.diametro]}`;
-            csvContent += `Proteccion,Domiciliaria (RA),${patUnica.cumple ? 'CUMPLE' : 'NO CUMPLE'},${patUnica.Rt.toFixed(2)},${patUnica.numJabalinas},${patUnica.objetivo.toFixed(1)},${params.resistividad},${params.ul},${p_d_text},${params.domiciliaria.rcd}\n`;
-        }
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "calculo_puesta_a_tierra.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-    
-    function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-            dom.fullscreenEnter.classList.add('hidden');
-            dom.fullscreenExit.classList.remove('hidden');
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-                dom.fullscreenEnter.classList.remove('hidden');
-                dom.fullscreenExit.classList.add('hidden');
             }
         }
-    }
-</script>
+
+        // --- INICIALIZACIÓN ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInitialState();
+            renderApp();
+            // Close modal on outside click
+            document.getElementById('modal').addEventListener('click', (e) => {
+                if (e.target.id === 'modal') {
+                    closeModal();
+                }
+            });
+        });
+
+    </script>
 </body>
 </html>
